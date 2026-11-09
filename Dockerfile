@@ -54,6 +54,18 @@ RUN sed -i 's/\r$//' /tmp/post-install.sql \
  ; for i in $(seq 1 30); do pgrep dataserver >/dev/null || break; sleep 1; done \
  ; ! pgrep dataserver
 
+COPY --chown=sybase:sybase scripts/tune.sql scripts/tune-after-restart.sql scripts/build-server.sh /tmp/
+
+# Size the server for tests: apply the configuration, restart for the static
+# 'max online engines', raise the engine threads, check the result, shut down
+RUN sed -i 's/\r$//' /tmp/tune.sql /tmp/tune-after-restart.sql /tmp/build-server.sh \
+ && source /tmp/build-server.sh \
+ && start_ase && run_sql /tmp/tune.sql && stop_ase \
+ && start_ase && run_sql /tmp/tune-after-restart.sql \
+ && printf "select count(*) from master..sysengines\ngo\n" | isql_sa -h-1 | tr -d ' \t' | grep -qx 4 \
+ && printf "exec sp_helpdb tempdb\ngo\nexec sp_cacheconfig 'default data cache'\ngo\n" | isql_sa -w 200 \
+ && stop_ase
+
 USER root
 # Drop what a test server doesn't need at runtime
 #  - diag* are debug builds of each server (diagserver alone is ~420 MB)

@@ -4,6 +4,7 @@
 #
 #   ./scripts/build.sh            build, test, tag
 #   ./scripts/build.sh --push     also push to GHCR (run `docker login ghcr.io` first)
+#   ./scripts/build.sh --no-cache rerun the SAP installer (new SySAM grace period)
 #
 # Environment overrides: IMAGE (default ghcr.io/bill-ramos-rmoswi/sap-ase),
 # SA_PASSWORD (default Password1).
@@ -14,7 +15,15 @@ cd "$(dirname "$0")/.."
 IMAGE="${IMAGE:-ghcr.io/bill-ramos-rmoswi/sap-ase}"
 SA_PASSWORD="${SA_PASSWORD:-Password1}"
 PUSH=false
-[[ "${1:-}" == "--push" ]] && PUSH=true
+BUILD_FLAGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --push) PUSH=true ;;
+        # Reruns the SAP installer, which starts a new SySAM grace period
+        --no-cache) BUILD_FLAGS+=(--no-cache) ;;
+        *) echo "Unknown option: $arg (use --push and/or --no-cache)" >&2; exit 2 ;;
+    esac
+done
 
 TGZ=Trial-Downloads/ASE_Suite.linuxamd64.tgz
 if [[ ! -f "$TGZ" ]]; then
@@ -23,7 +32,7 @@ if [[ ! -f "$TGZ" ]]; then
 fi
 
 echo "==> Building $IMAGE:build"
-docker build --platform linux/amd64 --build-arg SA_PASSWORD="$SA_PASSWORD" -t "$IMAGE:build" .
+docker build "${BUILD_FLAGS[@]}" --platform linux/amd64 --build-arg SA_PASSWORD="$SA_PASSWORD" -t "$IMAGE:build" .
 
 echo "==> Starting a test container"
 CID=$(docker run -d "$IMAGE:build")
@@ -54,6 +63,15 @@ TAG=$(echo "$VERSION_STRING" | cut -d/ -f2 | tr ' ' '-')
 
 echo "==> Sort order and character set"
 query "exec sp_helpsort" | grep -E 'Character Set =|Sort Order =' | sed 's/ *$//' || true
+
+echo "==> Configuration"
+query "set nocount on
+select name, value from master..sysconfigures
+ where name in ('max memory', 'number of user connections', 'number of locks',
+                'number of open objects', 'max online engines', 'procedure cache size')
+select 'engines online', count(*) from master..sysengines" | sed -E 's/ *$//; s/ {2,}/: /' | grep -vE '^\s*$|^ ?-+' || true
+query "exec sp_cacheconfig 'default data cache'" | grep -E '^ default data cache' | awk '{print " default data cache:", $6, $7}' || true
+query "exec sp_helpdb tempdb" | grep -E '^ tempdb ' | awk '{print " tempdb", $2, $3}' || true
 
 echo "==> License status (grace period)"
 query "exec sp_lmconfig" | grep -E 'ASE_CORE|edition|license type' | sed 's/ *$//' || true
