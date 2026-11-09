@@ -1,0 +1,78 @@
+##############################################################################
+# Silent-install response file for the SAP ASE trial image.
+#
+# Based on sample_response.txt from ASE_Suite.linuxamd64.tgz, trimmed to a
+# lean, test-only server:
+#   - SAP ASE server and Open Client (isql) only
+#   - no Backup Server, XP Server, Job Scheduler, Self Management, HADR,
+#     AMC, Cockpit, JDBC/ODBC drivers or sample databases
+#   - cp850 character set with its binary sort order (bin_cp850)
+#   - default page size, small device sizes
+#
+# The Dockerfile replaces @SA_PASSWORD@ at build time.
+##############################################################################
+
+RUN_SILENT=true
+USER_INSTALL_DIR=/opt/sap
+INSTALL_OLDER_VERSION=false
+DO_UPDATE_INSTALL=false
+
+CHOSEN_INSTALL_SET=Custom
+CHOSEN_FEATURE_LIST=fase_srv,fopen_client
+
+SYBASE_PRODUCT_LICENSE_TYPE=license
+SYSAM_LICENSE_SOURCE=proceed_without_license
+SYSAM_LICENSE_FILE_PATHNAME=
+SYSAM_EXISTING_LICENSE_SERVER_HOSTNAME=
+SYSAM_EXISTING_LICENSE_SERVER_PORTNUMBER=
+SYSAM_PRODUCT_EDITION=Enterprise Edition
+SYSAM_LICENSE_TYPE=DT :  Development and Test License
+SYSAM_NOTIFICATION_ENABLE=false
+
+DO_UPDATE_ASE_SERVER=false
+
+SY_CONFIG_ASE_SERVER=true
+SY_CONFIG_HADR_SERVER=false
+SY_CONFIG_BS_SERVER=false
+SY_CONFIG_XP_SERVER=false
+SY_CONFIG_JS_SERVER=false
+SY_CONFIG_SM_SERVER=false
+
+SY_CFG_USER_ACCOUNT_CHANGE=no
+SY_CFG_USER_ACCOUNT_NAME=
+SY_CFG_USER_ACCOUNT_PASSWORD=
+SY_CFG_USER_DATA_DIRECTORY=
+
+SY_CFG_ASE_SERVER_NAME=ASE
+SY_CFG_ASE_PORT_NUMBER=5000
+SY_CFG_ASE_APPL_TYPE=MIXED
+# Default page size (4k in the sample response file)
+SY_CFG_ASE_PAGESIZE=4k
+ASE_ADDL_CMD_ARG=
+SY_CFG_ASE_PASSWORD=@SA_PASSWORD@
+SY_CFG_ASE_MASTER_DEV_NAME=/opt/sap/data/master.dat
+SY_CFG_ASE_MASTER_DEV_SIZE=52
+SY_CFG_ASE_MASTER_DB_SIZE=26
+SY_CFG_ASE_SYBPROC_DEV_NAME=/opt/sap/data/sysprocs.dat
+SY_CFG_ASE_SYBPROC_DEV_SIZE=196
+SY_CFG_ASE_SYBPROC_DB_SIZE=196
+SY_CFG_ASE_SYBTEMP_DEV_NAME=/opt/sap/data/sybsysdb.dat
+SY_CFG_ASE_SYBTEMP_DEV_SIZE=6
+SY_CFG_ASE_SYBTEMP_DB_SIZE=6
+SY_CFG_ASE_ERROR_LOG=/opt/sap/ASE-16_1/install/ASE.log
+SY_CFG_ASE_PCI_ENABLE=false
+SY_CFG_ASE_PCI_DEV_NAME=
+SY_CFG_ASE_PCI_DEV_SIZE=
+SY_CFG_ASE_PCI_DB_SIZE=
+SY_CFG_ASE_AMC_ENABLE=false
+SY_CFG_ASE_AMC_PORT_NUMBER=
+SY_CFG_ASE_TEMP_DEV_NAME=/opt/sap/data/tempdbdev.dat
+SY_CFG_ASE_TEMP_DEV_SIZE=100
+SY_CFG_ASE_TEMP_DB_SIZE=100
+SY_CFG_ASE_OPT_ENABLE=false
+SY_CFG_ASE_CPU_NUMBER=
+SY_CFG_ASE_MEMORY=
+SY_CFG_ASE_LANG=us_english
+SY_CFG_ASE_CHARSET=cp850
+SY_CFG_ASE_SORTORDER=bin_cp850
+SY_CFG_ASE_SAMPLE_DB=false

@@ -1,0 +1,4 @@
+# SAP installer downloads must never be committed (license, and 2 GB+)
+Trial-Downloads/
+*.tgz
+*.zip

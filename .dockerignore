@@ -1,0 +1,6 @@
+# Send only what the Dockerfile needs. This keeps the 2.2 GB Windows zip
+# and the git history out of the build context.
+*
+!Trial-Downloads/ASE_Suite.linuxamd64.tgz
+!config/
+!scripts/
