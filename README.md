@@ -65,13 +65,23 @@ After install, the build also deletes the `diag*` debug servers (`diagserver` al
 
 ## 3. Push it to GitHub Container Registry
 
-1. Create a classic personal access token with `write:packages` (and `read:packages`).
+GHCR has no accounts of its own: you log in to `ghcr.io` (not Docker Hub) with your GitHub username and a GitHub token. A Docker Hub token doesn't work.
+
+1. Get a token with `write:packages`. Either reuse the GitHub CLI's token, or create a classic personal access token with `write:packages` (and `read:packages`):
+
+   ```shell
+   gh auth refresh -h github.com -s write:packages   # once; approve in the browser
+   export GHCR_TOKEN=$(gh auth token)
+   ```
+
 2. Log in and push:
 
    ```shell
    echo "$GHCR_TOKEN" | docker login ghcr.io -u bill-ramos-rmoswi --password-stdin
    ./scripts/build.sh --push
    ```
+
+   The very first push to a new package can fail with `denied` after the layers upload, while GHCR finishes creating the package. Run `docker push` for both tags again; the layers are already there. Check the result with `docker manifest inspect ghcr.io/bill-ramos-rmoswi/sap-ase:<version>`.
 
 3. In GitHub, open **Profile → Packages → sap-ase → Package settings**:
    - **Danger Zone → Change visibility**: make sure it's **Private**. A first push from a personal account is private by default.
@@ -149,7 +159,7 @@ jobs:
           --health-interval 5s
           --health-retries 24
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Check the server version
         run: docker exec ${{ job.services.ase.id }} bash -c 'source /opt/sap/SYBASE.sh >/dev/null; printf "select @@version\ngo\n" | isql -Usa -PPassword1 -SASE -b'
 ```
@@ -158,7 +168,7 @@ Pin the version tag rather than `latest` so a rebuild doesn't change CI unexpect
 
 ## Using this image in data-diff (not done yet)
 
-data-diff has no ASE driver yet, so nothing in that repo uses this image. When the driver is added, it will need:
+data-diff has no ASE driver yet, so nothing in that repo uses this image. The work is planned in [docs/plan/SAP-ASE-One-Shot-Prompt.md](https://github.com/bill-ramos-rmoswi/data-diff/blob/master/docs/plan/SAP-ASE-One-Shot-Prompt.md). When the driver is added, it will need:
 
 1. **`docker-compose.yml`**: an opt-in service, so `docker compose up` still works for anyone without access to the private image:
 
@@ -180,7 +190,7 @@ data-diff has no ASE driver yet, so nothing in that repo uses this image. When t
 
    The image's own healthcheck works with `docker compose --profile ase up -d --wait ase`.
 
-2. **`.github/workflows/pr-validate.yml`**: a job (or a step in `integration`) with `permissions: packages: read`, a GHCR login before `docker compose up`, and the fork-PR condition shown above:
+2. **`.github/workflows/pr-validate.yml`**: a job (or a step in `integration`) with `permissions: packages: read`, a GHCR login before `docker compose up`, and the fork-PR condition shown above. The `integration` job already runs Db2 6g, SQL Server 3g, PostgreSQL 2g and MySQL 2g on a 16 GB runner, so ASE at 2g brings it to 15g; a sibling job has more headroom.
 
    ```yaml
          - name: Log in to GHCR
@@ -191,7 +201,7 @@ data-diff has no ASE driver yet, so nothing in that repo uses this image. When t
 
 3. **Package access**: add `bill-ramos-rmoswi/data-diff` under the package's **Manage Actions access** with Read (step 3 above).
 
-4. **Test settings**: a `TEST_SYBASE_CONN_STRING` in `tests/common.py` and a `DATADIFF_SYBASE_URI`, along the lines of `sybase://sa:Password1@localhost:5000/testdb`. The scheme depends on the driver.
+4. **Test settings**: a `TEST_SYBASE_CONN_STRING` in `tests/common.py` and a `DATADIFF_SYBASE_URI`, along the lines of `sybase://sa:Password1@localhost:5000/testdb` (host `ase` from inside the compose network, such as the devcontainer). The scheme depends on the driver. FreeTDS must use TDS version 5.0 for ASE.
 
 5. **Checksums**: data-diff's cross-database hashing assumes UTF-8 strings. This server stores `cp850`, so the driver must convert to UTF-8 before hashing (or the client must connect with `charset=utf8` and ASE character-set conversion).
 
