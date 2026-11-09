@@ -1,0 +1,5 @@
+# Bash, SQL and the Dockerfile run inside Linux; keep LF on every checkout,
+# including Windows with core.autocrlf=true
+* text=auto eol=lf
+*.tgz binary
+*.zip binary
